@@ -3,12 +3,13 @@ package de.chojo.repbot;
 import com.zaxxer.hikari.HikariDataSource;
 import de.chojo.jdautil.botlist.BotlistService;
 import de.chojo.jdautil.command.dispatching.CommandHub;
+import de.chojo.jdautil.interactions.dispatching.InteractionHub;
 import de.chojo.jdautil.localization.ILocalizer;
 import de.chojo.jdautil.localization.Localizer;
 import de.chojo.jdautil.localization.util.Language;
 import de.chojo.repbot.analyzer.ContextResolver;
 import de.chojo.repbot.analyzer.MessageAnalyzer;
-import de.chojo.repbot.commands.AbuseProtection;
+import de.chojo.repbot.commands.abuseprotection.AbuseProtection;
 import de.chojo.repbot.commands.Channel;
 import de.chojo.repbot.commands.Dashboard;
 import de.chojo.repbot.commands.Debug;
@@ -65,6 +66,7 @@ import io.swagger.v3.oas.models.info.License;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
+import net.dv8tion.jda.api.interactions.DiscordLocale;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.requests.ErrorResponse;
 import net.dv8tion.jda.api.requests.GatewayIntent;
@@ -226,12 +228,12 @@ public class ReputationBot {
     }
 
     private void initLocalization() {
-        localizer = Localizer.builder(Language.ENGLISH)
-                .addLanguage(Language.GERMAN,
-                        Language.of("es_ES", "Español"),
-                        Language.of("fr_FR", "Français"),
-                        Language.of("pt_PT", "Português"),
-                        Language.of("ru_RU", "Русский"))
+        localizer = Localizer.builder(DiscordLocale.ENGLISH_US)
+                .addLanguage(DiscordLocale.GERMAN,
+                        DiscordLocale.SPANISH,
+                        DiscordLocale.FRENCH,
+                        DiscordLocale.PORTUGUESE_BRAZILIAN,
+                        DiscordLocale.RUSSIAN)
                 .withLanguageProvider(guild -> guilds.guild(guild).settings().general().language())
                 .withBundlePath("locale")
                 .build();
@@ -276,9 +278,8 @@ public class ReputationBot {
             shardManager.addEventListener(new InternalCommandListener(configuration, statistic, metrics));
         }
 
-        CommandHub.builder(shardManager)
+        InteractionHub.builder(shardManager)
                 .withConversationSystem()
-                .useGuildCommands()
                 .withCommands(
                         new Channel(guilds),
                         new Reputation(guilds, configuration, roleAssigner),
@@ -306,10 +307,10 @@ public class ReputationBot {
                         PermissionErrorHandler.handle((InsufficientPermissionException) throwable, shardManager, localizer, configuration);
                         return;
                     }
-                    log.error(LogNotify.NOTIFY_ADMIN, "Command execution of {} failed\n{}", context.command().meta().name(), context.args(), throwable);
+                    log.error(LogNotify.NOTIFY_ADMIN, "Command execution of {} failed\n{}", context.interaction().meta().name(), context.args(), throwable);
                 })
                 .withDefaultMenuService()
-                .withPostCommandHook(result -> metrics.commands().logCommand(result.context().command().meta().name()))
+                .withPostCommandHook(result -> metrics.commands().logCommand(result.context().interaction().meta().name()))
                 .withPagination(builder -> builder.withLocalizer(localizer).previousText("pages.previous").nextText("pages.next"))
                 .build();
 
